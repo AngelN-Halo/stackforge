@@ -71,3 +71,20 @@ a { color: inherit; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
   .topbar { flex-direction: column; align-items: flex-start; }
 }
+
+/* Settings page: account, user administration, platform view */
+.settings-shell { max-width: 900px; margin: 0 auto; padding: 24px; display: grid; gap: 16px; align-content: start; }
+.settings-shell h1 { margin: 0; }
+.settings-shell h3 { margin: 18px 0 8px; }
+.settings-shell .panel { min-height: 0; }
+.settings-shell input, .settings-shell select, .settings-shell button { width: 100%; border-radius: 12px; border: 1px solid var(--border); background: #0b1220; color: var(--text); padding: 12px 14px; font: inherit; }
+.settings-shell button { background: var(--accent); border: none; cursor: pointer; }
+.settings-shell button:disabled { opacity: .55; cursor: not-allowed; }
+.settings-shell .danger-button { width: auto; background: #7f1d1d; border: 1px solid #b91c1c; }
+.settings-shell .danger-button:hover { background: #991b1b; }
+.settings-shell pre { overflow-x: auto; }
+.settings-form { display: grid; gap: 10px; max-width: 460px; }
+.user-table { display: grid; gap: 8px; }
+.user-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: #111827; }
+.user-row select { width: auto; }
+@media (max-width: 640px) { .user-row { grid-template-columns: 1fr; } .user-row select, .user-row .danger-button, .user-row .icon-button { width: 100%; } }

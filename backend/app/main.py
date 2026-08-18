@@ -22,6 +22,7 @@ from app.schemas import (
     DeletePayload,
     FilePayload,
     LoginRequest,
+    PasswordChange,
     PreviewActionRequest,
     PreviewJobOut,
     ProjectCreate,
@@ -29,9 +30,12 @@ from app.schemas import (
     RenamePayload,
     SettingsOut,
     TokenResponse,
+    UserCreate,
     UserOut,
+    UserUpdate,
 )
 from app.security import create_access_token, decode_access_token, hash_password, verify_password
+from app.users import leaves_no_active_admin
 from app.utils import file_tree, safe_join
 from app.workspace import WorkspaceManager
 
@@ -171,6 +175,10 @@ async def login(payload: LoginRequest, response: Response, session: AsyncSession
     user = await session.scalar(select(User).where(User.email == payload.email))
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    # get_current_user also rejects inactive users, but without this a deactivated
+    # account still gets a 200 and a cookie here before failing on every next call.
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="This account is deactivated")
 
     token = create_access_token(str(user.id), user.role.value)
     response.set_cookie(
@@ -195,6 +203,24 @@ async def me(user: User = Depends(get_current_user)) -> UserOut:
     return _user_to_out(user)
 
 
+@app.post("/auth/change-password")
+async def change_password(
+    payload: PasswordChange,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    """Any authenticated user changes their own password. Admins cannot set another
+    user's password: there is no reset flow, so a forgotten password is recovered by
+    creating a new account or updating the hash on the server."""
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    if verify_password(payload.new_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="New password must differ from the current one")
+    user.password_hash = hash_password(payload.new_password)
+    await session.commit()
+    return {"status": "updated"}
+
+
 # --------------------------------------------------------------------------
 # Routes: settings (read-only view of env config)
 # --------------------------------------------------------------------------
@@ -209,6 +235,75 @@ async def get_settings(user: User = Depends(get_current_user)) -> SettingsOut:
         max_concurrent_previews=settings.max_concurrent_previews,
         max_context_size=settings.max_context_size,
     )
+
+
+# --------------------------------------------------------------------------
+# Routes: users (admin only)
+# Deactivating is the supported way to revoke access: projects reference their
+# owner, so deleting a user would orphan or cascade their work. There is
+# deliberately no endpoint for an admin to set another user's password.
+# --------------------------------------------------------------------------
+
+
+@app.get("/users", response_model=list[UserOut])
+async def list_users(
+    session: AsyncSession = Depends(get_session), user: User = Depends(get_current_user)
+) -> list[UserOut]:
+    require_role(user, {Role.admin})
+    rows = await session.scalars(select(User).order_by(User.created_at))
+    return [_user_to_out(row) for row in rows]
+
+
+@app.post("/users", response_model=UserOut, status_code=201)
+async def create_user(
+    payload: UserCreate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> UserOut:
+    require_role(user, {Role.admin})
+    # Stored as entered: login compares the address exactly, so normalising case
+    # here would lock out anyone who signs in the way they were invited.
+    email = payload.email.strip()
+    if await session.scalar(select(User).where(User.email == email)):
+        raise HTTPException(status_code=409, detail="A user with that email already exists")
+
+    created = User(
+        email=email,
+        password_hash=hash_password(payload.password),
+        role=Role(payload.role),
+    )
+    session.add(created)
+    await session.commit()
+    await session.refresh(created)
+    return _user_to_out(created)
+
+
+@app.patch("/users/{user_id}", response_model=UserOut)
+async def update_user(
+    user_id: uuid.UUID,
+    payload: UserUpdate,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> UserOut:
+    require_role(user, {Role.admin})
+    target = await session.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    everyone = [(row.id, row.role.value, row.is_active) for row in await session.scalars(select(User))]
+    if leaves_no_active_admin(everyone, target.id, payload.role, payload.is_active):
+        raise HTTPException(
+            status_code=409,
+            detail="Refusing this change: it would leave no active admin, which cannot be undone from the UI",
+        )
+
+    if payload.role is not None:
+        target.role = Role(payload.role)
+    if payload.is_active is not None:
+        target.is_active = payload.is_active
+    await session.commit()
+    await session.refresh(target)
+    return _user_to_out(target)
 
 
 # --------------------------------------------------------------------------
