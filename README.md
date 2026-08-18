@@ -15,7 +15,7 @@ StackForge is a self-hosted, Docker-based AI app builder for a small trusted tea
 
 1. Copy `.env.example` to `.env`
 2. Fill in `STACKFORGE_ADMIN_EMAIL`, `STACKFORGE_ADMIN_PASSWORD`, `DATABASE_URL`, and AI settings
-3. Run `docker compose up -d`
+3. Run `docker compose up -d`  (compose fails fast if a required variable is unset)
 4. Open the frontend on `http://localhost:3000` or the LAN proxy on `http://<host-ip>:18181`
 
 If your checkout lives somewhere other than this workspace path, update `PROJECTS_HOST_ROOT` in `.env` so the runner can bind mount project files correctly.
@@ -24,15 +24,18 @@ The browser app talks to the API through `/api` on the proxy, so do not point fr
 
 ## Admin user
 
-The first admin user is seeded from environment variables:
+The first admin user is seeded on startup from `STACKFORGE_ADMIN_EMAIL` and
+`STACKFORGE_ADMIN_PASSWORD`. There is no default login — the API refuses to start
+unless both are set, along with `JWT_SECRET` and `STACKFORGE_RUNNER_TOKEN`.
 
-- `STACKFORGE_ADMIN_EMAIL`
-- `STACKFORGE_ADMIN_PASSWORD`
+Generate the secrets rather than inventing them:
 
-Default local login:
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
-- Email: `admin@stackforge.local`
-- Password: `changeme123`
+Seeding only creates the user if it does not already exist; changing
+`STACKFORGE_ADMIN_PASSWORD` later does not rotate an existing account's password.
 
 ## AI settings
 
@@ -67,5 +70,6 @@ Preview URLs use `*.localhost` by default, so they resolve without extra DNS set
 
 - If the API cannot reach LiteLLM, verify `LITELLM_BASE_URL`
 - If previews fail, inspect runner logs and the generated project Dockerfile
-- If login fails, confirm the seeded admin credentials
+- If login fails, confirm the seeded admin credentials; note that editing
+  `STACKFORGE_ADMIN_PASSWORD` does not change an already-seeded user
 - If a page is still trying to call `http://localhost:8000`, rebuild the frontend container and make sure the page uses the shared API client

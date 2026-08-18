@@ -4,9 +4,12 @@ These notes describe the current deployment-specific architecture and constraint
 
 ## Deployment
 
-- StackForge is a self-hosted internal tool running with Docker Compose on server `192.168.1.180`.
+- StackForge is a self-hosted internal tool running with Docker Compose on a single LAN server.
+- Deployment-specific values (server address, checkout path, secrets) live in the untracked
+  `.env`. Docs below use `<server-lan-ip>` where the real address appears in `.env`.
 - Users enter through Caddy on port `18181` (HTTP). PostgreSQL, the API, frontend, and runner are not published directly.
-- The source checkout is `/home/angeln/docker/lovable/stackforge` on the server.
+- The source checkout lives on the server; `PROJECTS_HOST_ROOT` in `.env` must point at
+  its `volumes/projects` directory as the Docker daemon sees it.
 - Do not commit or print `.env`; `.env.example` contains safe placeholders.
 
 ## Built-in preview architecture
@@ -24,13 +27,13 @@ Browser iframe
 Preview URLs currently look like:
 
 ```text
-http://<project-uuid>.192.168.1.180.sslip.io:18181/
+http://<project-uuid>.<server-lan-ip>.sslip.io:18181/
 ```
 
 The pieces are:
 
 - `<project-uuid>` uniquely selects the StackForge project and preview container.
-- `192.168.1.180` is the StackForge server's LAN address.
+- `<server-lan-ip>` is the StackForge server's LAN address.
 - `sslip.io` is a public wildcard DNS service. A hostname containing an IPv4 address resolves to that address, so no local wildcard DNS configuration is required.
 - `18181` is the host port published by the StackForge Caddy service.
 
@@ -52,8 +55,8 @@ This hostname-based approach is important. It lets generated apps use root-relat
 
 ### Relevant settings
 
-- `PREVIEW_BASE_DOMAIN=192.168.1.180.sslip.io:18181` is used by the API when storing and returning iframe URLs.
-- `PREVIEW_BASE_DOMAIN_HOST=192.168.1.180.sslip.io` is passed to Caddy for Host matching.
+- `PREVIEW_BASE_DOMAIN=<server-lan-ip>.sslip.io:18181` is used by the API when storing and returning iframe URLs.
+- `PREVIEW_BASE_DOMAIN_HOST=<server-lan-ip>.sslip.io` is passed to Caddy for Host matching.
 - `STACKFORGE_PREVIEW_NETWORK=stackforge_default` is normally derived from the Compose project name.
 
 If the server address changes, update both preview-domain settings. For a fully self-hosted DNS setup, replace `sslip.io` with an internal wildcard DNS record such as `*.preview.example.internal` pointing at the StackForge server, then update both settings.

@@ -44,7 +44,7 @@ Everything else here is CRUD. This is where the real design is.
 
 ```
 Browser iframe
-  -> http://<project-uuid>.192.168.1.180.sslip.io:18181/
+  -> http://<project-uuid>.<server-lan-ip>.sslip.io:18181/
   -> Caddy Host regex extracts the UUID, rewrites to /proxy/<uuid><uri>
   -> stackforge-runner verifies the com.stackforge.preview ownership label
   -> runner reads the container's declared port from stackforge.json
@@ -56,7 +56,7 @@ Two things worth understanding, because neither is obvious:
 - **Why `sslip.io`:** it is a public wildcard DNS service that resolves any hostname
   containing an IPv4 address back to that address. So per-project subdomains work with
   zero local DNS setup. To go fully self-hosted, point an internal wildcard record at
-  this server and update `PREVIEW_BASE_DOMAIN` + `PREVIEW_BASE_DOMAIN_HOST`.
+  this server and update `PREVIEW_BASE_DOMAIN` + `PREVIEW_BASE_DOMAIN_HOST` in `.env`.
 - **Why hostname-based instead of `/preview/<uuid>/`:** generated apps use root-relative
   paths (`/api/x`, `/logo.png`). Under a path prefix those requests escape the prefix and
   break. Giving each project its own hostname makes root-relative paths work unmodified.

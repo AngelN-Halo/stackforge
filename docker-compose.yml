@@ -68,7 +68,7 @@ services:
     container_name: stackforge-proxy
     restart: unless-stopped
     environment:
-      PREVIEW_BASE_DOMAIN: ${PREVIEW_BASE_DOMAIN_HOST:-192.168.1.180.sslip.io}
+      PREVIEW_BASE_DOMAIN: ${PREVIEW_BASE_DOMAIN_HOST:?Set PREVIEW_BASE_DOMAIN_HOST in .env}
     ports:
       - "${STACKFORGE_PROXY_HTTP_PORT:-18181}:80"
       - "${STACKFORGE_PROXY_HTTPS_PORT:-18443}:443"

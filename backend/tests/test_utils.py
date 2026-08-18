@@ -14,9 +14,9 @@ def test_safe_join_blocks_escape(tmp_path: Path) -> None:
 
 
 def test_preview_domain_uses_project_subdomain() -> None:
-    url = preview_domain("192.168.1.180.sslip.io:18181", uuid.uuid4(), 3001)
+    url = preview_domain("192.0.2.10.sslip.io:18181", uuid.uuid4(), 3001)
     assert url.startswith("http://")
-    assert ".192.168.1.180.sslip.io:18181" in url
+    assert ".192.0.2.10.sslip.io:18181" in url
     assert not url.endswith(":3001")
 
 
