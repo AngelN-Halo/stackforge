@@ -1,4 +1,4 @@
-import type { AIResponse, Checkpoint, Project, User } from "./types";
+import type { AIResponse, Checkpoint, Project, Role, User } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
@@ -33,6 +33,27 @@ export const api = {
   },
   settings() {
     return request<Record<string, unknown>>("/settings");
+  },
+  changePassword(currentPassword: string, newPassword: string) {
+    return request<{ status: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+  },
+  listUsers() {
+    return request<User[]>("/users");
+  },
+  createUser(email: string, password: string, role: Role) {
+    return request<User>("/users", {
+      method: "POST",
+      body: JSON.stringify({ email, password, role }),
+    });
+  },
+  updateUser(id: string, changes: { role?: Role; is_active?: boolean }) {
+    return request<User>(`/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes),
+    });
   },
   listProjects() {
     return request<Project[]>("/projects");

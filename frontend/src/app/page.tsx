@@ -38,7 +38,9 @@ export default function HomePage() {
     <div className="page-shell" style={{ alignItems: "start" }}>
       <div className="auth-card" style={{ width: "min(760px, 100%)" }}>
         <h1>StackForge Dashboard</h1>
-        <p>Logged in as {user.email}</p>
+        <p>
+          Logged in as {user.email} ({user.role}) · <Link href="/settings">Settings</Link>
+        </p>
         <div style={{ display: "grid", gap: 12 }}>
           <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Project name" />
           <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Description" />

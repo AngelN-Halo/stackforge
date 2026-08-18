@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.users import MIN_PASSWORD_LENGTH
+
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -16,6 +18,28 @@ class UserOut(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+
+
+class UserCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=200)
+    role: Literal["admin", "builder", "viewer"] = "builder"
+
+
+class UserUpdate(BaseModel):
+    role: Literal["admin", "builder", "viewer"] | None = None
+    is_active: bool | None = None
+
+    @model_validator(mode="after")
+    def require_a_change(self) -> "UserUpdate":
+        if self.role is None and self.is_active is None:
+            raise ValueError("Provide role, is_active, or both")
+        return self
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=200)
 
 
 class LoginRequest(BaseModel):
