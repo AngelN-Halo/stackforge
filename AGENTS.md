@@ -5,7 +5,7 @@ These notes describe the current deployment-specific architecture and constraint
 ## Deployment
 
 - StackForge is a self-hosted internal tool running with Docker Compose on server `192.168.1.180`.
-- Users enter through Caddy on port `18181` (HTTP). PostgreSQL, Redis, the API, frontend, worker, and runner are not published directly.
+- Users enter through Caddy on port `18181` (HTTP). PostgreSQL, the API, frontend, and runner are not published directly.
 - The source checkout is `/home/angeln/docker/lovable/stackforge` on the server.
 - Do not commit or print `.env`; `.env.example` contains safe placeholders.
 
@@ -46,7 +46,7 @@ This hostname-based approach is important. It lets generated apps use root-relat
 - Preview container operations are scoped by UUID-derived names and ownership labels.
 - Preview containers receive resource limits, dropped Linux capabilities, and `no-new-privileges`.
 - Do not drop every Linux capability indiscriminately: common rootful images may need `CHOWN`, `SETUID`, or `SETGID` during entrypoint initialization. Prefer unprivileged base images; the runner drops a targeted dangerous subset and applies `no-new-privileges`.
-- Platform database, Redis, session, and AI secrets must never be passed into preview containers.
+- Platform database, session, and AI secrets must never be passed into preview containers.
 - API-to-runner lifecycle calls require `STACKFORGE_RUNNER_TOKEN`.
 - The Caddy preview proxy endpoint intentionally does not expose Docker lifecycle operations.
 

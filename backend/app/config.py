@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     stackforge_admin_email: str = "admin@stackforge.local"
     stackforge_admin_password: str = "changeme123"
     database_url: str
-    redis_url: str = "redis://localhost:6379/0"
     litellm_base_url: str = "http://localhost:4000"
     litellm_api_key: str = ""
     default_model: str = "gpt-4o"

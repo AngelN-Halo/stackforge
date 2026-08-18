@@ -12,7 +12,7 @@ this file is the map that makes both of those easier to read.
 
 ## Services
 
-Six containers. **Only Caddy publishes host ports** (18181 HTTP, 18443 HTTPS);
+Five containers. **Only Caddy publishes host ports** (18181 HTTP, 18443 HTTPS);
 everything else is reachable only on the private Compose network `stackforge_default`.
 
 | Container | Role | Entry point |
@@ -22,8 +22,6 @@ everything else is reachable only on the private Compose network `stackforge_def
 | `stackforge-api` | FastAPI. Auth, projects, files, AI, checkpoints. | [`backend/app/main.py`](backend/app/main.py) |
 | `stackforge-runner` | **The only container with the Docker socket.** Builds and proxies previews. | [`runner/app.py`](runner/app.py) |
 | `stackforge-postgres` | Users, projects, checkpoints, preview jobs. | [`backend/migrations/0001_initial.sql`](backend/migrations/0001_initial.sql) |
-| `stackforge-redis` | Job queue — **currently unused, see Known gaps.** | — |
-| `stackforge-worker` | Queue consumer — **currently a stub, see Known gaps.** | [`worker/app.py`](worker/app.py) |
 
 The single most important structural rule: **the API never touches the Docker socket.**
 It reaches the runner over authenticated HTTP (`STACKFORGE_RUNNER_TOKEN`). If you are
@@ -65,7 +63,7 @@ Two things worth understanding, because neither is obvious:
 
 Preview containers publish no host ports, join only the Compose network, get resource
 limits, `no-new-privileges`, and a targeted capability drop — and never receive platform
-DB/Redis/session/AI secrets. See `AGENTS.md` for the full invariant list before changing
+DB/session/AI secrets. See `AGENTS.md` for the full invariant list before changing
 any of it.
 
 ## The AI edit loop
@@ -90,7 +88,7 @@ backend/app/
   utils.py      safe_join, file_tree     config.py    env settings
 runner/app.py   build / stop / delete / reverse-proxy previews  (has the Docker socket)
 templates/      starter projects copied on project creation
-volumes/        runtime state — postgres, redis, caddy, projects. Do not edit by hand.
+volumes/        runtime state — postgres, caddy, projects. Do not edit by hand.
 ```
 
 `main.py` is one long file by design, but it is divided by `# ---` section banners:
@@ -101,12 +99,11 @@ files → AI → checkpoints → preview → export. Jump between banners to nav
 
 Things that look intentional but are not — worth knowing before you trust them:
 
-- **The Redis worker is a no-op.** `worker/app.py` blocks forever on the
-  `stackforge:jobs` list, but *nothing enqueues to it* — there is no `rpush`/`lpush`
-  anywhere in the API or runner, and the backend never imports redis. Preview builds are
-  synchronous API→runner HTTP calls. The worker and Redis services are currently
-  scaffolding for async job handling that was never wired up. Either wire preview builds
-  through the queue or drop both services; do not assume builds are already async.
+- **There is no background job queue.** Preview builds are *synchronous* API→runner HTTP
+  calls, so a slow image build holds the request open. A `stackforge-worker` service and a
+  Redis queue used to exist here, but nothing ever enqueued to them — they were removed as
+  dead scaffolding (see git history if you want them back as a starting point). If build
+  latency becomes a problem, reintroducing an async queue is the fix.
 - **No git.** This directory is not a repository, so there is no undo. Take copies before
   invasive changes.
 - **`ARCHIVE-stackforge-update-2026-06/`** (one level up) is a stale partial fork that

@@ -15,18 +15,6 @@ services:
       timeout: 5s
       retries: 5
 
-  stackforge-redis:
-    image: redis:7-alpine
-    container_name: stackforge-redis
-    restart: unless-stopped
-    volumes:
-      - ./volumes/redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   stackforge-api:
     build:
       context: ./backend
@@ -36,7 +24,6 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
-      REDIS_URL: redis://stackforge-redis:6379/0
       PROJECTS_ROOT: /data/projects
       STACKFORGE_RUNNER_URL: http://stackforge-runner:9000
       STACKFORGE_TEMPLATES_ROOT: /templates
@@ -45,27 +32,6 @@ services:
       - ./templates:/templates:ro
     depends_on:
       stackforge-postgres:
-        condition: service_healthy
-      stackforge-redis:
-        condition: service_healthy
-
-  stackforge-worker:
-    build:
-      context: ./worker
-      dockerfile: Dockerfile
-    container_name: stackforge-worker
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
-      REDIS_URL: redis://stackforge-redis:6379/0
-      PROJECTS_ROOT: /data/projects
-    volumes:
-      - ./volumes/projects:/data/projects
-    depends_on:
-      stackforge-postgres:
-        condition: service_healthy
-      stackforge-redis:
         condition: service_healthy
 
   stackforge-runner:
@@ -76,7 +42,6 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      REDIS_URL: redis://stackforge-redis:6379/0
       PROJECTS_ROOT: /data/projects
       PROJECTS_HOST_ROOT: ${PROJECTS_HOST_ROOT:?Set PROJECTS_HOST_ROOT in .env}
       STACKFORGE_RUNNER_TOKEN: ${STACKFORGE_RUNNER_TOKEN:?Set STACKFORGE_RUNNER_TOKEN in .env}
@@ -84,9 +49,6 @@ services:
     volumes:
       - ./volumes/projects:/data/projects
       - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-      stackforge-redis:
-        condition: service_healthy
 
   stackforge-web:
     build:

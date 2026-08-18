@@ -390,7 +390,7 @@ async def restore_checkpoint(
 # Routes: preview lifecycle (delegated to stackforge-runner)
 # The API never touches the Docker socket. Every build/start/stop/delete is a
 # token-authenticated HTTP call to the runner, which owns the socket.
-# These calls are synchronous - the redis worker is NOT involved.
+# These calls are synchronous; there is no background job queue.
 # See ARCHITECTURE.md for the full browser -> Caddy -> runner request path.
 # --------------------------------------------------------------------------
 
