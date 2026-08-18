@@ -1,0 +1,1 @@
+{"name":"node-express-template","private":true,"scripts":{"dev":"node server.js"},"dependencies":{"express":"^4.21.2"}}

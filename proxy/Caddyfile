@@ -1,0 +1,19 @@
+:80 {
+  encode gzip
+
+  @preview header_regexp preview Host `^([0-9a-f-]{36})\.{$PREVIEW_BASE_DOMAIN}(?::[0-9]+)?$`
+  handle @preview {
+    rewrite * /proxy/{re.preview.1}{uri}
+    reverse_proxy stackforge-runner:9000
+  }
+
+  @api path /api/*
+  handle @api {
+    uri strip_prefix /api
+    reverse_proxy stackforge-api:8000
+  }
+
+  handle {
+    reverse_proxy stackforge-web:3000
+  }
+}
